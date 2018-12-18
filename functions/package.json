@@ -1,0 +1,19 @@
+{
+  "name": "breath-better",
+  "description": "Breath Better Bot",
+  "scripts": {
+    "serve": "firebase serve --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "actions-on-google": "^2.5.0",
+    "dotenv": "^6.2.0",
+    "firebase-admin": "^6.4.0",
+    "firebase-functions": "^2.1.0",
+    "util": "^0.11.1"
+  },
+  "private": true
+}
