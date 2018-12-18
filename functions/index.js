@@ -9,35 +9,33 @@ const {
 const admin = require('firebase-admin');
 const functions = require('firebase-functions');
 const util = require('util')
-require('dotenv').config()
 
-const serviceAccount = require("config/serviceAccountKey.json");
+const serviceAccount = require("./config/serviceAccountKey.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://breath-better.firebaseio.com"
 });
 
-
 const auth = admin.auth();
 const db = admin.firestore();
+const dbuser = {
+  user: db.collection('user'),
+};
 // Just something to stop annoying error messages, ignore
 db.settings({ timestampsInSnapshots: true });
 
-const version = 0.1
+const version = 0.22
 
 const datetime = Date.now()
 const datetimeString = datetime.toString()
 
+console.log(`version is ${version}`)
 console.log(`deploy datetime is ${datetimeString}`)
 
-const dbuser = {
-  user: db.collection('user'),
-};
-
 const app = dialogflow({
-  // TODO Change this to process.env
-  clientId: CLIENTIDENV,
+  // It's in the Firebase configuration files
+  clientId: functions.config().fireconfig.key,
   debug: true,
 });
 
@@ -49,6 +47,7 @@ app.middleware(async(conv) => {
   console.log('Middleware conv.data object ' + util.inspect(conv.data));
   console.log('Middleware email ' + util.inspect(email));
   console.log('Payload ' + util.inspect(conv.user.profile.payload));
+  console.log(`Fireconfig is ${functions.config().fireconfig.key}`)
   if (!conv.data.uid && email) {
     try {
       // If there is no uid then grab the UID from the Firebase Email Address
@@ -72,7 +71,7 @@ app.middleware(async(conv) => {
 app.intent('Default Welcome Intent', async(conv) => {
   const { payload } = conv.user.profile;
   const name = payload ? ` ${payload.given_name}` : '';
-  conv.ask(`Hi ${name}!`);
+  conv.ask(`Hi ${name}! `);
 
   // Suggestions will be placed at the end of the response
   conv.ask(new Suggestions('User', 'Admin'));
@@ -80,25 +79,20 @@ app.intent('Default Welcome Intent', async(conv) => {
   if (conv.user.ref) {
     const doc = await conv.user.ref.get();
     if (doc.exists) {
-      const account = doc.data().level;
+      const visits = doc.data().Visits;
       // 
       console.log('Default Welcome Intent conv.user.ref' + (conv.user.ref));
       // Results as Object object
       console.log('Default Welcome Intent doc.data() ' + util.inspect(doc.data()))
         // Undefined
-      console.log(`Default Welcome Intent doc.data.level is ${doc.data.level}`);
+      console.log(`Default Welcome Intent doc.data.Visits is ${doc.data.Visits}`);
       // Works
-      const { level, Admin, FirstName } = doc.data();
-      console.log(`Default Welcome Intent level,FirstName is ${level} ${FirstName}`);
-      // Works
-      console.log(`Default Welcome Intent doc.data().level is ${doc.data().level}`);
+      const { level, Visits, FirstName } = doc.data();
       // TODO Testing Version
-      return conv.ask(`Version ${version} Your Account Level is ${account}. ` +
-        'Tell me your new Account Level.');
+      return conv.ask(`Version ${version} You have this amount of visits ${visits}.`);
     }
   }
-
-  conv.ask(`What's your Account Level?`);
+  conv.ask(`Great to hear from you again?`);
 });
 
 app.intent('Give Account', async(conv, { account }) => {
@@ -115,7 +109,8 @@ app.intent('Give Account', async(conv, { account }) => {
       ProfileImage: payload.picture,
       ProfileCreated: payload.iat,
       ProfileExpires: payload.exp,
-      GoogleID: payload.sub
+      GoogleID: payload.sub,
+      Visits: 0
     });
     conv.ask(`I got ${account} as your Account Access ${payload.given_name} .`);
     return conv.ask(` Since you are signed in, I'll remember it next time.`);
@@ -138,6 +133,5 @@ app.intent('Get Sign In', async(conv, params, signin) => {
   });
   conv.ask(`I saved ${account} as your Account Level for next time.`);
 });
-
 
 exports.breath = functions.https.onRequest(app);
