@@ -25,7 +25,7 @@ const dbuser = {
 // Just something to stop annoying error messages, ignore
 db.settings({ timestampsInSnapshots: true });
 
-const version = 0.22
+const version = 0.24
 
 const datetime = Date.now()
 const datetimeString = datetime.toString()
@@ -74,7 +74,7 @@ app.intent('Default Welcome Intent', async(conv) => {
   conv.ask(`Hi ${name}! `);
 
   // Suggestions will be placed at the end of the response
-  conv.ask(new Suggestions('User', 'Admin'));
+  conv.ask(new Suggestions('Yes', 'Nop'));
 
   if (conv.user.ref) {
     const doc = await conv.user.ref.get();
@@ -89,10 +89,41 @@ app.intent('Default Welcome Intent', async(conv) => {
       // Works
       const { level, Visits, FirstName } = doc.data();
       // TODO Testing Version
-      return conv.ask(`Version ${version} You have this amount of visits ${visits}.`);
+      return conv.ask(` Version ${version} You have this amount of visits ${visits}.`);
     }
   }
-  conv.ask(`Great to hear from you again?`);
+  if (conv.user.ref) {
+    const doc = await conv.user.ref.get();
+    if (doc.exists) {
+      const visits = doc.data().Visits;
+      // 
+      console.log('Default Welcome Intent conv.user.ref' + (conv.user.ref));
+      // Results as Object object
+      console.log('Default Welcome Intent doc.data() ' + util.inspect(doc.data()))
+        // Undefined
+      console.log(`Default Welcome Intent doc.data.Visits is ${doc.data.Visits}`);
+      // Works
+      // TODO Testing Version
+      return conv.ask(` Version ${version} You have this amount of visits ${visits}.`);
+    }
+  }
+  else {
+      await conv.user.ref.set({
+        level: account,
+        Email: payload.email,
+        LastName: payload.family_name,
+        FirstName: payload.given_name,
+        FullName: payload.name,
+        ProfileImage: payload.picture,
+        ProfileCreated: payload.iat,
+        ProfileExpires: payload.exp,
+        GoogleID: payload.sub,
+        Visits: 0
+      });
+      conv.SimpleResponse(`I've just added the profile info to the database`);
+      return
+}
+  conv.ask(`We don't have any of your profile info to add to database`);
 });
 
 app.intent('Give Account', async(conv, { account }) => {
