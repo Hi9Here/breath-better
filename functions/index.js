@@ -25,7 +25,7 @@ const dbuser = {
 // Just something to stop annoying error messages, ignore
 db.settings({ timestampsInSnapshots: true });
 
-const version = 0.24
+const version = 0.25
 
 const datetime = Date.now()
 const datetimeString = datetime.toString()
@@ -62,7 +62,7 @@ app.middleware(async(conv) => {
     }
   }
   if (conv.data.uid) {
-    console.log('Middleware dbuser.user.doc(conv.data.uid) ' + (dbuser.user.doc(conv.data.uid)));
+    console.log(`Middleware dbuser.user.doc(conv.data.uid)  ${JSON.stringify(dbuser.user.doc(conv.data.uid))}`);
     console.log('Middleware conv.user.ref ' + (conv.user.ref));
     conv.user.ref = dbuser.user.doc(conv.data.uid);
   }
@@ -106,23 +106,22 @@ app.intent('Default Welcome Intent', async(conv) => {
       // TODO Testing Version
       return conv.ask(` Version ${version} You have this amount of visits ${visits}.`);
     }
+  } else {
+    await conv.user.ref.set({
+      level: account,
+      Email: payload.email,
+      LastName: payload.family_name,
+      FirstName: payload.given_name,
+      FullName: payload.name,
+      ProfileImage: payload.picture,
+      ProfileCreated: payload.iat,
+      ProfileExpires: payload.exp,
+      GoogleID: payload.sub,
+      Visits: 0
+    });
+    conv.SimpleResponse(`I've just added the profile info to the database`);
+    return
   }
-  else {
-      await conv.user.ref.set({
-        level: account,
-        Email: payload.email,
-        LastName: payload.family_name,
-        FirstName: payload.given_name,
-        FullName: payload.name,
-        ProfileImage: payload.picture,
-        ProfileCreated: payload.iat,
-        ProfileExpires: payload.exp,
-        GoogleID: payload.sub,
-        Visits: 0
-      });
-      conv.SimpleResponse(`I've just added the profile info to the database`);
-      return
-}
   conv.ask(`We don't have any of your profile info to add to database`);
 });
 
